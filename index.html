@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <title>Study Pop</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- グラフ用 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      font-family: "Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", sans-serif;
+      background: linear-gradient(135deg, #ffecd2, #fcb69f);
+      text-align: center;
+      padding: 20px;
+    }
+
+    h1 {
+      color: #ff6f91;
+      margin-bottom: 5px;
+    }
+
+    p {
+      color: #555;
+    }
+
+    .card {
+      background: white;
+      border-radius: 24px;
+      padding: 20px;
+      max-width: 420px;
+      margin: 20px auto;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    input {
+      width: 80%;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 14px;
+      border: 2px solid #ddd;
+      margin-top: 10px;
+    }
+
+    button {
+      margin-top: 15px;
+      padding: 12px 26px;
+      border: none;
+      border-radius: 30px;
+      background: #ff9671;
+      color: white;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 5px 12px rgba(0,0,0,0.2);
+    }
+
+    button.secondary {
+      background: #845ec2;
+    }
+
+    button:hover {
+      opacity: 0.85;
+    }
+
+    .msg {
+      margin-top: 15px;
+      font-weight: bold;
+      color: #2c73d2;
+    }
+
+    .streak {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #ff8066;
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- 🏠 ホーム画面 -->
+  <div id="home">
+    <h1>📚 Study Pop</h1>
+    <p>今日の勉強時間を記録しよう！</p>
+
+    <div class="card">
+      <input type="number" id="timeInput" placeholder="勉強時間（分）">
+      <br>
+      <button onclick="saveTime()">💾 記録する</button>
+
+      <p class="msg" id="message"></p>
+      <p class="streak" id="streak"></p>
+
+      <button class="secondary" onclick="showGraph()">
+        📊 グラフを見る
+      </button>
+    </div>
+  </div>
+
+  <!-- 📊 グラフ画面 -->
+  <div id="graph" style="display:none;">
+    <h1>📊 勉強時間グラフ</h1>
+
+    <div class="card">
+      <canvas id="studyChart"></canvas>
+      <br>
+      <button onclick="showHome()">🏠 戻る</button>
+    </div>
+  </div>
+
+  <script>
+    let chart = null;
+
+    // 勉強時間を保存
+    function saveTime() {
+      const time = document.getElementById("timeInput").value;
+
+      if (!time) {
+        document.getElementById("message").textContent =
+          "⚠️ 時間を入力してね";
+        return;
+      }
+
+      const today = new Date().toISOString().slice(0, 10);
+      localStorage.setItem(today, time);
+
+      document.getElementById("message").textContent =
+        "✨ " + today + " の勉強時間を保存したよ！";
+
+      document.getElementById("timeInput").value = "";
+
+      updateStreak();
+    }
+
+    // 連続記録
+    function updateStreak() {
+      let streak = 0;
+      let d = new Date();
+
+      while (true) {
+        const key = d.toISOString().slice(0, 10);
+        if (localStorage.getItem(key)) {
+          streak++;
+          d.setDate(d.getDate() - 1);
+        } else {
+          break;
+        }
+      }
+
+      if (streak > 0) {
+        document.getElementById("streak").textContent =
+          "🔥 連続 " + streak + " 日 勉強中！";
+      }
+    }
+
+    // 画面切り替え
+    function showGraph() {
+      document.getElementById("home").style.display = "none";
+      document.getElementById("graph").style.display = "block";
+      drawGraph();
+    }
+
+    function showHome() {
+      document.getElementById("graph").style.display = "none";
+      document.getElementById("home").style.display = "block";
+    }
+
+    // グラフ描画（実データ）
+    function drawGraph() {
+      const labels = [];
+      const data = [];
+
+      Object.keys(localStorage)
+        .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key))
+        .sort()
+        .forEach(key => {
+          labels.push(key);
+          data.push(Number(localStorage.getItem(key)));
+        });
+
+      const ctx = document.getElementById("studyChart");
+
+      if (chart) {
+        chart.destroy();
+      }
+
+      chart = new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "勉強時間（分）",
+            data: data,
+            backgroundColor: "#ff9671"
+          }]
+        },
+        options: {
+          borderRadius: 10,
+          scales: {
+            y: { beginAtZero: true }
+          }
+        }
+      });
+    }
+
+    // 初期表示
+    updateStreak();
+  </script>
+
+</body>
+</html>
