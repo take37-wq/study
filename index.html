@@ -9,11 +9,9 @@
 
 <style>
 body {
-  margin: 0;
-  padding: 20px;
-  font-family: system-ui;
+  margin:0; padding:20px; font-family:system-ui;
   background: linear-gradient(135deg,#ffdde1,#ee9ca7);
-  text-align: center;
+  text-align:center;
 }
 
 h1 { color:#fff; }
@@ -27,53 +25,28 @@ h1 { color:#fff; }
 }
 
 input {
-  width:80%;
-  padding:12px;
-  font-size:16px;
-  border-radius:12px;
-  border:1px solid #ccc;
+  width:80%; padding:12px; font-size:16px;
+  border-radius:12px; border:1px solid #ccc;
 }
 
 button {
-  margin-top:10px;
-  padding:12px 20px;
-  font-size:16px;
-  border:none;
-  border-radius:30px;
-  background:#ff7aa2;
-  color:#fff;
+  margin-top:10px; padding:12px 20px;
+  font-size:16px; border:none; border-radius:30px;
+  background:#ff7aa2; color:#fff; cursor:pointer;
 }
+button:disabled { background:#ccc; cursor:default; }
 
-.stat {
-  font-size:18px;
-  margin:6px 0;
-}
+.stat { font-size:18px; margin:6px 0; }
 
-ul {
-  list-style:none;
-  padding:0;
-  max-height:180px;
-  overflow-y:auto;
-}
+ul { list-style:none; padding:0; max-height:180px; overflow-y:auto; }
+li { font-size:14px; padding:4px; }
 
-li {
-  font-size:14px;
-  padding:4px;
-}
-
-.tabs button {
-  margin:5px;
-  background:#ffd6e8;
-  color:#333;
-}
+.tabs button { margin:5px; background:#ffd6e8; color:#333; }
 
 .hidden { display:none; }
 
-#chartContainer {
-  width: 100%;
-  max-width: 100%;
-  height: 400px;
-}
+#chartContainer { width:100%; height:400px; position:relative; }
+#weekNav { margin:10px 0; }
 </style>
 </head>
 
@@ -81,6 +54,7 @@ li {
 
 <h1>📚 Study Pop</h1>
 
+<!-- 勉強記録入力 -->
 <div class="card">
   <h2>勉強時間を記録</h2>
   <input type="number" id="minutes" placeholder="何分勉強した？">
@@ -88,6 +62,7 @@ li {
   <button onclick="addStudy()">記録する</button>
 </div>
 
+<!-- ステータス -->
 <div class="card">
   <h2>📊 ステータス</h2>
   <div class="stat" id="total">合計：0 分</div>
@@ -95,17 +70,24 @@ li {
   <div class="stat" id="streak">🔥 連続：0 日</div>
 </div>
 
+<!-- 履歴 / グラフ -->
 <div class="card">
   <div class="tabs">
     <button onclick="show('history')">📅 履歴</button>
     <button onclick="show('graph')">📈 グラフ</button>
   </div>
 
+  <!-- 履歴 -->
   <div id="history">
     <ul id="historyList"></ul>
   </div>
 
+  <!-- グラフ -->
   <div id="graph" class="hidden">
+    <div id="weekNav">
+      <button id="prevWeekBtn" onclick="prevWeek()">⬅ 前の週</button>
+      <button id="nextWeekBtn" onclick="nextWeek()">次の週 ➡</button>
+    </div>
     <div id="chartContainer">
       <canvas id="chart"></canvas>
     </div>
@@ -114,42 +96,40 @@ li {
 
 <script>
 const KEY = "study-pop-data";
+let currentWeekOffset = 0; // 0 = 今週, -1 = 先週, -2 = 2週間前 ...
 
-function load() {
-  return JSON.parse(localStorage.getItem(KEY)) || [];
-}
+// データ読み込み/保存
+function load() { return JSON.parse(localStorage.getItem(KEY)) || []; }
+function save(data) { localStorage.setItem(KEY, JSON.stringify(data)); }
 
-function save(data) {
-  localStorage.setItem(KEY, JSON.stringify(data));
-}
-
+// 勉強時間追加
 function addStudy() {
   const min = Number(document.getElementById("minutes").value);
-  if (!min) return;
-
+  if(!min) return;
   const data = load();
   const today = new Date().toISOString().slice(0,10);
-  data.push({date:today, min});
+  data.push({date:today,min});
   save(data);
   document.getElementById("minutes").value="";
   render();
 }
 
+// 画面描画
 function render() {
   const data = load();
+
+  // 合計 / 今月
   let total=0, month=0;
   const nowMonth = new Date().toISOString().slice(0,7);
   const days = [...new Set(data.map(d=>d.date))].sort();
-
   data.forEach(d=>{
     total += d.min;
     if(d.date.startsWith(nowMonth)) month += d.min;
   });
-
   document.getElementById("total").innerText = `合計：${total} 分`;
   document.getElementById("month").innerText = `今月：${month} 分`;
 
-  // streak
+  // 連続日数
   let streak=0;
   for(let i=days.length-1;i>=0;i--){
     const diff = (new Date() - new Date(days[i]))/86400000;
@@ -158,7 +138,7 @@ function render() {
   }
   document.getElementById("streak").innerText = `🔥 連続：${streak} 日`;
 
-  // history
+  // 履歴リスト
   const historyList = document.getElementById("historyList");
   historyList.innerHTML="";
   data.slice().reverse().forEach(d=>{
@@ -167,57 +147,52 @@ function render() {
     historyList.appendChild(li);
   });
 
-  drawChart(data);
+  drawChart(data, currentWeekOffset);
+  updateButtons();
 }
 
+// グラフ描画
 let chart;
-function drawChart(data){
-  if(data.length===0) return;
-
+function drawChart(data, weekOffset){
   const weekNames = ["日","月","火","水","木","金","土"];
   const labels = [];
   const values = [];
 
   const today = new Date();
-  const startDate = new Date(today);
-  startDate.setDate(today.getDate() - 41); // 過去6週間（42日分）
+  const sunday = new Date(today);
+  sunday.setDate(today.getDate() - today.getDay() + (weekOffset*7)); // 今週 + offset
 
-  for(let d = new Date(startDate); d <= today; d.setDate(d.getDate()+1)){
-    const yyyy = d.getFullYear();
-    const mm = d.getMonth()+1;
-    const dd = d.getDate();
+  for(let i=0;i<7;i++){
+    const dt = new Date(sunday);
+    dt.setDate(sunday.getDate() + i);
+    const yyyy = dt.getFullYear();
+    const mm = dt.getMonth()+1;
+    const dd = dt.getDate();
     const dateStr = `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-
-    labels.push(`${weekNames[d.getDay()]}\n${mm}/${dd}`);
-
-    const dayData = data.filter(x=>x.date===dateStr).reduce((sum,x)=>sum+x.min,0);
+    labels.push(`${weekNames[dt.getDay()]}\n${mm}/${dd}`);
+    const dayData = data.filter(d=>d.date===dateStr).reduce((sum,x)=>sum+x.min,0);
     values.push(dayData);
   }
 
   if(chart) chart.destroy();
   chart = new Chart(document.getElementById("chart"), {
     type:"bar",
-    data:{
-      labels,
-      datasets:[{
-        label:"勉強時間（分）",
-        data:values,
-        backgroundColor:"#ff8fab",
-        barPercentage: 0.6,
-        categoryPercentage: 0.7
-      }]
-    },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{ legend:{ display:true } },
-      scales:{
-        y:{ beginAtZero:true, ticks:{ stepSize:5 } }
-      }
-    }
+    data:{ labels, datasets:[{label:"勉強時間（分）",data:values,backgroundColor:"#ff8fab",barPercentage:0.6,categoryPercentage:0.7}] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:5 } } } }
   });
 }
 
+// 週移動
+function prevWeek(){ currentWeekOffset--; render(); }
+function nextWeek(){ currentWeekOffset++; render(); }
+
+// 次週ボタンの無効化
+function updateButtons(){
+  const nextBtn = document.getElementById("nextWeekBtn");
+  nextBtn.disabled = currentWeekOffset >= 0; // 今週より未来は無効
+}
+
+// 履歴 / グラフ切替
 function show(id){
   document.getElementById("history").classList.add("hidden");
   document.getElementById("graph").classList.add("hidden");
