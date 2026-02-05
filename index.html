@@ -5,12 +5,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Study Pop</title>
 
-<!-- PWA / iOS -->
-<link rel="icon" href="icon.png">
-<link rel="apple-touch-icon" href="icon.png">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
@@ -75,8 +69,10 @@ li {
 
 .hidden { display:none; }
 
-#graphWrapper {
-  overflow-x:auto; /* 横スクロール対応 */
+#chartContainer {
+  width: 100%;
+  max-width: 100%;
+  height: 400px;
 }
 </style>
 </head>
@@ -110,8 +106,8 @@ li {
   </div>
 
   <div id="graph" class="hidden">
-    <div id="graphWrapper">
-      <canvas id="chart" width="1400" height="400"></canvas> <!-- 幅を長めにしてスクロール -->
+    <div id="chartContainer">
+      <canvas id="chart"></canvas>
     </div>
   </div>
 </div>
@@ -179,40 +175,23 @@ function drawChart(data){
   if(data.length===0) return;
 
   const weekNames = ["日","月","火","水","木","金","土"];
-
-  // 過去最初の記録日から今日まで
-  const firstDate = new Date(data[0].date);
-  const lastDate = new Date();
-
   const labels = [];
   const values = [];
 
-  // 日付からその週の日曜を取得
-  function getSunday(date){
-    const d = new Date(date);
-    d.setDate(d.getDate() - d.getDay());
-    return d;
-  }
+  const today = new Date();
+  const startDate = new Date(today);
+  startDate.setDate(today.getDate() - 41); // 過去6週間（42日分）
 
-  let currentSunday = getSunday(firstDate);
+  for(let d = new Date(startDate); d <= today; d.setDate(d.getDate()+1)){
+    const yyyy = d.getFullYear();
+    const mm = d.getMonth()+1;
+    const dd = d.getDate();
+    const dateStr = `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
 
-  while(currentSunday <= lastDate){
-    for(let i=0;i<7;i++){
-      const dt = new Date(currentSunday);
-      dt.setDate(currentSunday.getDate()+i);
+    labels.push(`${weekNames[d.getDay()]}\n${mm}/${dd}`);
 
-      const yyyy = dt.getFullYear();
-      const mm = dt.getMonth()+1;
-      const dd = dt.getDate();
-      const dateStr = `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
-
-      labels.push(`${weekNames[i]}\n${mm}/${dd}`);
-
-      // その日の合計
-      const dayData = data.filter(d=>d.date===dateStr).reduce((sum,d)=>sum+d.min,0);
-      values.push(dayData);
-    }
-    currentSunday.setDate(currentSunday.getDate()+7);
+    const dayData = data.filter(x=>x.date===dateStr).reduce((sum,x)=>sum+x.min,0);
+    values.push(dayData);
   }
 
   if(chart) chart.destroy();
@@ -229,7 +208,8 @@ function drawChart(data){
       }]
     },
     options:{
-      responsive:false,
+      responsive:true,
+      maintainAspectRatio:false,
       plugins:{ legend:{ display:true } },
       scales:{
         y:{ beginAtZero:true, ticks:{ stepSize:5 } }
