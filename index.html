@@ -74,6 +74,10 @@ li {
 }
 
 .hidden { display:none; }
+
+#graphWrapper {
+  overflow-x:auto; /* 横スクロール対応 */
+}
 </style>
 </head>
 
@@ -106,7 +110,9 @@ li {
   </div>
 
   <div id="graph" class="hidden">
-    <canvas id="chart" width="700" height="400"></canvas> <!-- 幅を固定 -->
+    <div id="graphWrapper">
+      <canvas id="chart" width="1400" height="400"></canvas> <!-- 幅を長めにしてスクロール -->
+    </div>
   </div>
 </div>
 
@@ -170,22 +176,44 @@ function render() {
 
 let chart;
 function drawChart(data){
-  const daily={};
-  data.forEach(d=>{
-    daily[d.date]=(daily[d.date]||0)+d.min;
-  });
+  if(data.length===0) return;
 
-  const dates = Object.keys(daily).sort();
-  const values = dates.map(date => daily[date]);
+  const weekNames = ["日","月","火","水","木","金","土"];
 
-  // X軸ラベルに「曜日\n月/日」を追加
-  const labels = dates.map(date=>{
-    const dt = new Date(date);
-    const week = ["日","月","火","水","木","金","土"];
-    const dayOfWeek = week[dt.getDay()];
-    const monthDay = `${dt.getMonth()+1}/${dt.getDate()}`;
-    return `${dayOfWeek}\n${monthDay}`;
-  });
+  // 過去最初の記録日から今日まで
+  const firstDate = new Date(data[0].date);
+  const lastDate = new Date();
+
+  const labels = [];
+  const values = [];
+
+  // 日付からその週の日曜を取得
+  function getSunday(date){
+    const d = new Date(date);
+    d.setDate(d.getDate() - d.getDay());
+    return d;
+  }
+
+  let currentSunday = getSunday(firstDate);
+
+  while(currentSunday <= lastDate){
+    for(let i=0;i<7;i++){
+      const dt = new Date(currentSunday);
+      dt.setDate(currentSunday.getDate()+i);
+
+      const yyyy = dt.getFullYear();
+      const mm = dt.getMonth()+1;
+      const dd = dt.getDate();
+      const dateStr = `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+
+      labels.push(`${weekNames[i]}\n${mm}/${dd}`);
+
+      // その日の合計
+      const dayData = data.filter(d=>d.date===dateStr).reduce((sum,d)=>sum+d.min,0);
+      values.push(dayData);
+    }
+    currentSunday.setDate(currentSunday.getDate()+7);
+  }
 
   if(chart) chart.destroy();
   chart = new Chart(document.getElementById("chart"), {
@@ -196,22 +224,15 @@ function drawChart(data){
         label:"勉強時間（分）",
         data:values,
         backgroundColor:"#ff8fab",
-        barPercentage: 0.6,    // 棒幅調整
+        barPercentage: 0.6,
         categoryPercentage: 0.7
       }]
     },
     options:{
-      responsive:false,        // 幅を固定
-      plugins:{
-        legend:{ display:true },
-      },
+      responsive:false,
+      plugins:{ legend:{ display:true } },
       scales:{
-        y:{
-          beginAtZero:true,
-          ticks:{
-            stepSize:5          // 5分ごとの目盛り
-          }
-        }
+        y:{ beginAtZero:true, ticks:{ stepSize:5 } }
       }
     }
   });
