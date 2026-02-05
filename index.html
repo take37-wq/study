@@ -8,29 +8,44 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-body { margin:0; padding:20px; font-family:system-ui; background:linear-gradient(135deg,#ffdde1,#ee9ca7); text-align:center;}
-h1 { color:#fff; }
-.card { background:#fff; border-radius:20px; padding:20px; margin-bottom:20px; box-shadow:0 10px 20px rgba(0,0,0,.15);}
-input { width:60%; padding:12px; font-size:16px; border-radius:12px; border:1px solid #ccc; }
-button { margin-top:10px; padding:12px 20px; font-size:16px; border:none; border-radius:30px; background:#ff7aa2; color:#fff; cursor:pointer; }
+html, body { margin:0; padding:0; height:100%; font-family:system-ui; background:linear-gradient(135deg,#ffdde1,#ee9ca7); }
+body { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; text-align:center; }
+
+h1 { color:#fff; margin:10px 0; }
+
+.card {
+  background:#fff; border-radius:20px; padding:10px 20px; margin:5px 0;
+  box-shadow:0 10px 20px rgba(0,0,0,.15); width:95%; max-width:500px; flex-shrink:0;
+}
+
+input { width:60%; padding:10px; font-size:16px; border-radius:12px; border:1px solid #ccc; }
+
+button { margin-top:5px; padding:10px 20px; font-size:16px; border:none; border-radius:30px; background:#ff7aa2; color:#fff; cursor:pointer; }
 button:disabled { background:#ccc; cursor:default; }
-.stat { font-size:18px; margin:6px 0; }
-ul { list-style:none; padding:0; max-height:180px; overflow-y:auto; }
-li { font-size:14px; padding:4px; }
-.tabs button { margin:5px; background:#ffd6e8; color:#333; }
+
+.stat { font-size:16px; margin:4px 0; }
+
+ul { list-style:none; padding:0; max-height:100px; overflow-y:auto; margin:0; }
+li { font-size:14px; padding:2px 0; }
+
+.tabs button { margin:2px; background:#ffd6e8; color:#333; }
+
 .hidden { display:none; }
-#chartContainer { width:100%; height:400px; position:relative; }
-#weekNav { margin:10px 0; }
-#effectContainer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; }
-.star { position:absolute; font-size:24px; animation:fly 1s linear forwards; }
+
+#chartContainer { width:100%; height:200px; position:relative; }
+#weekNav { margin:5px 0; }
+#effectContainer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; }
+
+.star { position:absolute; animation:fly 1s linear forwards; }
 @keyframes fly { 0%{opacity:1; transform:translateY(0) rotate(0deg);} 100%{opacity:0; transform:translateY(-150px) rotate(360deg);} }
+
 </style>
 </head>
 <body>
 
 <h1>📚 Study Pop</h1>
 
-<!-- 勉強記録入力 -->
+<!-- 勉強記録 -->
 <div class="card">
   <h2>勉強時間を記録</h2>
   <input type="number" id="minutes" placeholder="何分勉強した？">
@@ -84,26 +99,19 @@ const KEY = "study-pop-data";
 const GOAL_KEY = "study-pop-goal";
 let currentWeekOffset = 0;
 
-// 初期化
-if(!localStorage.getItem(GOAL_KEY)) localStorage.setItem(GOAL_KEY, "0");
+if(!localStorage.getItem(GOAL_KEY)) localStorage.setItem(GOAL_KEY,"0");
 
-// 通知権限
-if("Notification" in window && Notification.permission !== "granted") {
-  Notification.requestPermission();
-}
+if("Notification" in window && Notification.permission !== "granted") Notification.requestPermission();
 
-// データ操作
-function load(){ return JSON.parse(localStorage.getItem(KEY)) || []; }
-function save(data){ localStorage.setItem(KEY, JSON.stringify(data)); }
+function load(){ return JSON.parse(localStorage.getItem(KEY))||[]; }
+function save(data){ localStorage.setItem(KEY,JSON.stringify(data)); }
 
-// 目標設定
 function setGoal(){
   const g = Number(document.getElementById("goalInput").value);
   if(g>0){ localStorage.setItem(GOAL_KEY,g); document.getElementById("goalDisplay").innerText=g; render(); }
 }
 function getGoal(){ return Number(localStorage.getItem(GOAL_KEY)) || 0; }
 
-// 勉強記録追加
 function addStudy(){
   const min = Number(document.getElementById("minutes").value);
   if(!min) return;
@@ -117,7 +125,6 @@ function addStudy(){
   checkGoal();
 }
 
-// 目標達成チェック & 通知
 function checkGoal(){
   const goal = getGoal();
   if(goal<=0) return;
@@ -125,60 +132,50 @@ function checkGoal(){
   const today = new Date().toISOString().slice(0,10);
   const sumToday = data.filter(d=>d.date===today).reduce((sum,x)=>sum+x.min,0);
   if(sumToday >= goal){
-    // 達成演出
-    showEffect(50,true);
-    // 通知
+    showEffect(50,true); // 達成時演出
     if("Notification" in window && Notification.permission==="granted"){
       new Notification("目標達成！","今日の目標をクリアしました🎉");
     }
   }
 }
 
-// 演出・エフェクト
-function showEffect(count, big=false){
+function showEffect(count,big=false){
   const container = document.getElementById("effectContainer");
-  for(let i=0;i<(big?10:3);i++){
+  for(let i=0;i<(big?15:5);i++){
     const star = document.createElement("div");
     star.className="star";
     star.style.left=Math.random()*container.offsetWidth+"px";
-    star.style.color=big?"gold":"#ff8fab";
-    star.style.fontSize=big?(20+Math.random()*20)+"px":"24px";
-    star.innerText="⭐";
+    star.style.top=Math.random()*container.offsetHeight+"px";
+    star.style.color = big ? ["gold","red","orange","lime","aqua"][Math.floor(Math.random()*5)]:"#ff8fab";
+    star.style.fontSize = big ? (20+Math.random()*30)+"px":"24px";
+    star.innerText = "⭐";
     container.appendChild(star);
     setTimeout(()=>container.removeChild(star),1000);
   }
 }
 
-// 描画
 function render(){
   const data = load();
-
-  // 合計 / 今月
   let total=0, month=0;
   const nowMonth = new Date().toISOString().slice(0,7);
-  const days = [...new Set(data.map(d=>d.date))].sort();
-  data.forEach(d=>{
-    total += d.min;
-    if(d.date.startsWith(nowMonth)) month += d.min;
-  });
-  document.getElementById("total").innerText = `合計：${total} 分`;
-  document.getElementById("month").innerText = `今月：${month} 分`;
+  const days=[...new Set(data.map(d=>d.date))].sort();
+  data.forEach(d=>{ total+=d.min; if(d.date.startsWith(nowMonth)) month+=d.min; });
+  document.getElementById("total").innerText=`合計：${total} 分`;
+  document.getElementById("month").innerText=`今月：${month} 分`;
 
-  // 連続日数
   let streak=0;
   for(let i=days.length-1;i>=0;i--){
-    const diff = (new Date() - new Date(days[i]))/86400000;
-    if(diff < streak + 1) streak++;
+    const diff=(new Date()-new Date(days[i]))/86400000;
+    if(diff<streak+1) streak++;
     else break;
   }
-  document.getElementById("streak").innerText = `🔥 連続：${streak} 日`;
+  document.getElementById("streak").innerText=`🔥 連続：${streak} 日`;
 
-  // 履歴
-  const historyList = document.getElementById("historyList");
+  const historyList=document.getElementById("historyList");
   historyList.innerHTML="";
   data.slice().reverse().forEach(d=>{
-    const li = document.createElement("li");
-    li.textContent = `${d.date}：${d.min} 分`;
+    const li=document.createElement("li");
+    li.textContent=`${d.date}：${d.min} 分`;
     historyList.appendChild(li);
   });
 
@@ -186,54 +183,41 @@ function render(){
   updateButtons();
 }
 
-// グラフ描画
 let chart;
 function drawChart(data,weekOffset){
-  const weekNames = ["日","月","火","水","木","金","土"];
-  const labels = [];
-  const values = [];
-  const today = new Date();
-  const sunday = new Date(today);
-  sunday.setDate(today.getDate() - today.getDay() + (weekOffset*7));
-
+  const weekNames=["日","月","火","水","木","金","土"];
+  const labels=[];
+  const values=[];
+  const today=new Date();
+  const sunday=new Date(today);
+  sunday.setDate(today.getDate()-today.getDay() + (weekOffset*7));
   for(let i=0;i<7;i++){
-    const dt = new Date(sunday);
-    dt.setDate(sunday.getDate() + i);
-    const yyyy = dt.getFullYear();
-    const mm = dt.getMonth()+1;
-    const dd = dt.getDate();
-    const dateStr = `${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
+    const dt=new Date(sunday);
+    dt.setDate(sunday.getDate()+i);
+    const yyyy=dt.getFullYear();
+    const mm=dt.getMonth()+1;
+    const dd=dt.getDate();
+    const dateStr=`${yyyy}-${String(mm).padStart(2,'0')}-${String(dd).padStart(2,'0')}`;
     labels.push(`${weekNames[dt.getDay()]}\n${mm}/${dd}`);
     const dayData = data.filter(d=>d.date===dateStr).reduce((sum,x)=>sum+x.min,0);
     values.push(dayData);
   }
-
   if(chart) chart.destroy();
   chart=new Chart(document.getElementById("chart"),{
     type:"bar",
-    data:{ labels, datasets:[{label:"勉強時間（分）",data:values,backgroundColor:"#ff8fab",barPercentage:0.6,categoryPercentage:0.7}] },
+    data:{ labels,datasets:[{label:"勉強時間（分）",data:values,backgroundColor:"#ff8fab",barPercentage:0.6,categoryPercentage:0.7}] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:5 } } } }
   });
 }
 
-// 週移動
 function prevWeek(){ currentWeekOffset--; render(); }
 function nextWeek(){ currentWeekOffset++; render(); }
-function updateButtons(){
-  document.getElementById("nextWeekBtn").disabled = currentWeekOffset>=0;
-}
+function updateButtons(){ document.getElementById("nextWeekBtn").disabled = currentWeekOffset>=0; }
+function show(id){ document.getElementById("history").classList.add("hidden"); document.getElementById("graph").classList.add("hidden"); document.getElementById(id).classList.remove("hidden"); }
 
-// 履歴 / グラフ切替
-function show(id){
-  document.getElementById("history").classList.add("hidden");
-  document.getElementById("graph").classList.add("hidden");
-  document.getElementById(id).classList.remove("hidden");
-}
-
-// 初期化表示
 document.getElementById("goalDisplay").innerText=getGoal()>0?getGoal():"未設定";
 render();
-</script>
 
+</script>
 </body>
 </html>
