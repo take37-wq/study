@@ -2,8 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Study Pop</title>
+
+<!-- アプリアイコン設定 -->
+<link rel="icon" href="">
+<link rel="apple-touch-icon" href="/Users/tanakayasuo/Desktop/icon/ChatGPT Image 2026年2月5日 07_36_03.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
@@ -29,7 +35,12 @@ h1 { color:#fff; margin:10px 0; }
 
 input { width:65%; padding:12px; font-size:16px; border-radius:15px; border:1px solid #ccc; }
 
-button { margin-top:6px; padding:14px 28px; font-size:16px; border:none; border-radius:30px; background:#ff85b3; color:#fff; cursor:pointer; }
+button { 
+  margin-top:6px; padding:14px 28px; font-size:16px; 
+  border:none; border-radius:30px; background:#ff85b3; color:#fff; cursor:pointer; 
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
 button:disabled { background:#ccc; cursor:default; }
 
 .stat { font-size:16px; margin:5px 0; }
@@ -41,9 +52,11 @@ li { font-size:14px; padding:3px 0; }
 
 .hidden { display:none; }
 
+/* グラフコンテナ */
 #chartContainer { width:95%; max-width:500px; height:45vh; position:relative; overflow:hidden; margin:auto; }
 #weekNav { margin:5px 0; }
 
+/* 画面全体に演出表示 */
 #effectContainer {
   position: fixed; top:0; left:0; width:100vw; height:100vh;
   pointer-events:none; overflow:visible; z-index:9999;
