@@ -9,7 +9,7 @@
 
 <style>
 html, body { margin:0; padding:0; height:100%; font-family:system-ui; background:linear-gradient(135deg,#ffdde1,#ee9ca7); }
-body { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow:hidden; text-align:center; }
+body { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; text-align:center; }
 
 h1 { color:#fff; margin:10px 0; }
 
@@ -32,7 +32,7 @@ li { font-size:14px; padding:2px 0; }
 
 .hidden { display:none; }
 
-#chartContainer { width:100%; height:200px; position:relative; }
+#chartContainer { width:100%; height:300px; position:relative; overflow:hidden; }
 #weekNav { margin:5px 0; }
 #effectContainer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden; }
 
@@ -99,19 +99,26 @@ const KEY = "study-pop-data";
 const GOAL_KEY = "study-pop-goal";
 let currentWeekOffset = 0;
 
+// 初期化
 if(!localStorage.getItem(GOAL_KEY)) localStorage.setItem(GOAL_KEY,"0");
 
-if("Notification" in window && Notification.permission !== "granted") Notification.requestPermission();
+// 通知権限
+if("Notification" in window && Notification.permission !== "granted") {
+  Notification.requestPermission();
+}
 
+// データ操作
 function load(){ return JSON.parse(localStorage.getItem(KEY))||[]; }
 function save(data){ localStorage.setItem(KEY,JSON.stringify(data)); }
 
+// 目標設定
 function setGoal(){
   const g = Number(document.getElementById("goalInput").value);
   if(g>0){ localStorage.setItem(GOAL_KEY,g); document.getElementById("goalDisplay").innerText=g; render(); }
 }
 function getGoal(){ return Number(localStorage.getItem(GOAL_KEY)) || 0; }
 
+// 勉強記録追加
 function addStudy(){
   const min = Number(document.getElementById("minutes").value);
   if(!min) return;
@@ -125,6 +132,7 @@ function addStudy(){
   checkGoal();
 }
 
+// 目標達成チェック & 通知
 function checkGoal(){
   const goal = getGoal();
   if(goal<=0) return;
@@ -139,6 +147,7 @@ function checkGoal(){
   }
 }
 
+// 演出・エフェクト
 function showEffect(count,big=false){
   const container = document.getElementById("effectContainer");
   for(let i=0;i<(big?15:5);i++){
@@ -154,8 +163,11 @@ function showEffect(count,big=false){
   }
 }
 
+// 描画
 function render(){
   const data = load();
+
+  // 合計 / 今月
   let total=0, month=0;
   const nowMonth = new Date().toISOString().slice(0,7);
   const days=[...new Set(data.map(d=>d.date))].sort();
@@ -163,6 +175,7 @@ function render(){
   document.getElementById("total").innerText=`合計：${total} 分`;
   document.getElementById("month").innerText=`今月：${month} 分`;
 
+  // 連続日数
   let streak=0;
   for(let i=days.length-1;i>=0;i--){
     const diff=(new Date()-new Date(days[i]))/86400000;
@@ -171,6 +184,7 @@ function render(){
   }
   document.getElementById("streak").innerText=`🔥 連続：${streak} 日`;
 
+  // 履歴
   const historyList=document.getElementById("historyList");
   historyList.innerHTML="";
   data.slice().reverse().forEach(d=>{
@@ -183,6 +197,7 @@ function render(){
   updateButtons();
 }
 
+// グラフ描画
 let chart;
 function drawChart(data,weekOffset){
   const weekNames=["日","月","火","水","木","金","土"];
@@ -210,9 +225,12 @@ function drawChart(data,weekOffset){
   });
 }
 
+// 週移動
 function prevWeek(){ currentWeekOffset--; render(); }
 function nextWeek(){ currentWeekOffset++; render(); }
 function updateButtons(){ document.getElementById("nextWeekBtn").disabled = currentWeekOffset>=0; }
+
+// 履歴 / グラフ切替
 function show(id){ document.getElementById("history").classList.add("hidden"); document.getElementById("graph").classList.add("hidden"); document.getElementById(id).classList.remove("hidden"); }
 
 document.getElementById("goalDisplay").innerText=getGoal()>0?getGoal():"未設定";
