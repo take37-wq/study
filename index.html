@@ -1,213 +1,204 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <title>Study Pop</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Study Pop</title>
 
-  <!-- グラフ用 -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- PWA / iOS -->
+<link rel="icon" href="icon.png">
+<link rel="apple-touch-icon" href="icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 
-  <style>
-    body {
-      font-family: "Arial Rounded MT Bold", "Hiragino Maru Gothic ProN", sans-serif;
-      background: linear-gradient(135deg, #ffecd2, #fcb69f);
-      text-align: center;
-      padding: 20px;
-    }
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    h1 {
-      color: #ff6f91;
-      margin-bottom: 5px;
-    }
+<style>
+body {
+  margin: 0;
+  padding: 20px;
+  font-family: system-ui;
+  background: linear-gradient(135deg,#ffdde1,#ee9ca7);
+  text-align: center;
+}
 
-    p {
-      color: #555;
-    }
+h1 { color:#fff; }
 
-    .card {
-      background: white;
-      border-radius: 24px;
-      padding: 20px;
-      max-width: 420px;
-      margin: 20px auto;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-    }
+.card {
+  background:#fff;
+  border-radius:20px;
+  padding:20px;
+  margin-bottom:20px;
+  box-shadow:0 10px 20px rgba(0,0,0,.15);
+}
 
-    input {
-      width: 80%;
-      padding: 12px;
-      font-size: 16px;
-      border-radius: 14px;
-      border: 2px solid #ddd;
-      margin-top: 10px;
-    }
+input {
+  width:80%;
+  padding:12px;
+  font-size:16px;
+  border-radius:12px;
+  border:1px solid #ccc;
+}
 
-    button {
-      margin-top: 15px;
-      padding: 12px 26px;
-      border: none;
-      border-radius: 30px;
-      background: #ff9671;
-      color: white;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 5px 12px rgba(0,0,0,0.2);
-    }
+button {
+  margin-top:10px;
+  padding:12px 20px;
+  font-size:16px;
+  border:none;
+  border-radius:30px;
+  background:#ff7aa2;
+  color:#fff;
+}
 
-    button.secondary {
-      background: #845ec2;
-    }
+.stat {
+  font-size:18px;
+  margin:6px 0;
+}
 
-    button:hover {
-      opacity: 0.85;
-    }
+ul {
+  list-style:none;
+  padding:0;
+  max-height:180px;
+  overflow-y:auto;
+}
 
-    .msg {
-      margin-top: 15px;
-      font-weight: bold;
-      color: #2c73d2;
-    }
+li {
+  font-size:14px;
+  padding:4px;
+}
 
-    .streak {
-      margin-top: 10px;
-      font-weight: bold;
-      color: #ff8066;
-    }
-  </style>
+.tabs button {
+  margin:5px;
+  background:#ffd6e8;
+  color:#333;
+}
+
+.hidden { display:none; }
+</style>
 </head>
 
 <body>
 
-  <!-- 🏠 ホーム画面 -->
-  <div id="home">
-    <h1>📚 Study Pop</h1>
-    <p>今日の勉強時間を記録しよう！</p>
+<h1>📚 Study Pop</h1>
 
-    <div class="card">
-      <input type="number" id="timeInput" placeholder="勉強時間（分）">
-      <br>
-      <button onclick="saveTime()">💾 記録する</button>
+<div class="card">
+  <h2>勉強時間を記録</h2>
+  <input type="number" id="minutes" placeholder="何分勉強した？">
+  <br>
+  <button onclick="addStudy()">記録する</button>
+</div>
 
-      <p class="msg" id="message"></p>
-      <p class="streak" id="streak"></p>
+<div class="card">
+  <h2>📊 ステータス</h2>
+  <div class="stat" id="total">合計：0 分</div>
+  <div class="stat" id="month">今月：0 分</div>
+  <div class="stat" id="streak">🔥 連続：0 日</div>
+</div>
 
-      <button class="secondary" onclick="showGraph()">
-        📊 グラフを見る
-      </button>
-    </div>
+<div class="card">
+  <div class="tabs">
+    <button onclick="show('history')">📅 履歴</button>
+    <button onclick="show('graph')">📈 グラフ</button>
   </div>
 
-  <!-- 📊 グラフ画面 -->
-  <div id="graph" style="display:none;">
-    <h1>📊 勉強時間グラフ</h1>
-
-    <div class="card">
-      <canvas id="studyChart"></canvas>
-      <br>
-      <button onclick="showHome()">🏠 戻る</button>
-    </div>
+  <div id="history">
+    <ul id="historyList"></ul>
   </div>
 
-  <script>
-    let chart = null;
+  <div id="graph" class="hidden">
+    <canvas id="chart"></canvas>
+  </div>
+</div>
 
-    // 勉強時間を保存
-    function saveTime() {
-      const time = document.getElementById("timeInput").value;
+<script>
+const KEY = "study-pop-data";
 
-      if (!time) {
-        document.getElementById("message").textContent =
-          "⚠️ 時間を入力してね";
-        return;
-      }
+function load() {
+  return JSON.parse(localStorage.getItem(KEY)) || [];
+}
 
-      const today = new Date().toISOString().slice(0, 10);
-      localStorage.setItem(today, time);
+function save(data) {
+  localStorage.setItem(KEY, JSON.stringify(data));
+}
 
-      document.getElementById("message").textContent =
-        "✨ " + today + " の勉強時間を保存したよ！";
+function addStudy() {
+  const min = Number(minutes.value);
+  if (!min) return;
 
-      document.getElementById("timeInput").value = "";
+  const data = load();
+  const today = new Date().toISOString().slice(0,10);
+  data.push({date:today, min});
+  save(data);
+  minutes.value="";
+  render();
+}
 
-      updateStreak();
+function render() {
+  const data = load();
+  let total=0, month=0;
+  const nowMonth = new Date().toISOString().slice(0,7);
+  const days = [...new Set(data.map(d=>d.date))].sort();
+
+  data.forEach(d=>{
+    total+=d.min;
+    if(d.date.startsWith(nowMonth)) month+=d.min;
+  });
+
+  total.innerText = `合計：${total} 分`;
+  month.innerText = `今月：${month} 分`;
+
+  // streak
+  let streak=0;
+  for(let i=days.length-1;i>=0;i--){
+    const diff = (new Date() - new Date(days[i]))/86400000;
+    if(diff<streak+1) streak++;
+    else break;
+  }
+  document.getElementById("streak").innerText = `🔥 連続：${streak} 日`;
+
+  // history
+  historyList.innerHTML="";
+  data.slice().reverse().forEach(d=>{
+    const li=document.createElement("li");
+    li.textContent=`${d.date}：${d.min} 分`;
+    historyList.appendChild(li);
+  });
+
+  drawChart(data);
+}
+
+let chart;
+function drawChart(data){
+  const daily={};
+  data.forEach(d=>{
+    daily[d.date]=(daily[d.date]||0)+d.min;
+  });
+
+  const labels=Object.keys(daily);
+  const values=Object.values(daily);
+
+  if(chart) chart.destroy();
+  chart=new Chart(document.getElementById("chart"),{
+    type:"bar",
+    data:{
+      labels,
+      datasets:[{
+        label:"勉強時間（分）",
+        data:values,
+        backgroundColor:"#ff8fab"
+      }]
     }
+  });
+}
 
-    // 連続記録
-    function updateStreak() {
-      let streak = 0;
-      let d = new Date();
+function show(id){
+  history.classList.add("hidden");
+  graph.classList.add("hidden");
+  document.getElementById(id).classList.remove("hidden");
+}
 
-      while (true) {
-        const key = d.toISOString().slice(0, 10);
-        if (localStorage.getItem(key)) {
-          streak++;
-          d.setDate(d.getDate() - 1);
-        } else {
-          break;
-        }
-      }
-
-      if (streak > 0) {
-        document.getElementById("streak").textContent =
-          "🔥 連続 " + streak + " 日 勉強中！";
-      }
-    }
-
-    // 画面切り替え
-    function showGraph() {
-      document.getElementById("home").style.display = "none";
-      document.getElementById("graph").style.display = "block";
-      drawGraph();
-    }
-
-    function showHome() {
-      document.getElementById("graph").style.display = "none";
-      document.getElementById("home").style.display = "block";
-    }
-
-    // グラフ描画（実データ）
-    function drawGraph() {
-      const labels = [];
-      const data = [];
-
-      Object.keys(localStorage)
-        .filter(key => /^\d{4}-\d{2}-\d{2}$/.test(key))
-        .sort()
-        .forEach(key => {
-          labels.push(key);
-          data.push(Number(localStorage.getItem(key)));
-        });
-
-      const ctx = document.getElementById("studyChart");
-
-      if (chart) {
-        chart.destroy();
-      }
-
-      chart = new Chart(ctx, {
-        type: "bar",
-        data: {
-          labels: labels,
-          datasets: [{
-            label: "勉強時間（分）",
-            data: data,
-            backgroundColor: "#ff9671"
-          }]
-        },
-        options: {
-          borderRadius: 10,
-          scales: {
-            y: { beginAtZero: true }
-          }
-        }
-      });
-    }
-
-    // 初期表示
-    updateStreak();
-  </script>
+render();
+</script>
 
 </body>
 </html>
