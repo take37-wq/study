@@ -122,14 +122,14 @@ function save(data) {
 }
 
 function addStudy() {
-  const min = Number(minutes.value);
+  const min = Number(document.getElementById("minutes").value);
   if (!min) return;
 
   const data = load();
   const today = new Date().toISOString().slice(0,10);
   data.push({date:today, min});
   save(data);
-  minutes.value="";
+  document.getElementById("minutes").value="";
   render();
 }
 
@@ -140,27 +140,28 @@ function render() {
   const days = [...new Set(data.map(d=>d.date))].sort();
 
   data.forEach(d=>{
-    total+=d.min;
-    if(d.date.startsWith(nowMonth)) month+=d.min;
+    total += d.min;
+    if(d.date.startsWith(nowMonth)) month += d.min;
   });
 
-  total.innerText = `合計：${total} 分`;
-  month.innerText = `今月：${month} 分`;
+  document.getElementById("total").innerText = `合計：${total} 分`;
+  document.getElementById("month").innerText = `今月：${month} 分`;
 
   // streak
   let streak=0;
   for(let i=days.length-1;i>=0;i--){
     const diff = (new Date() - new Date(days[i]))/86400000;
-    if(diff<streak+1) streak++;
+    if(diff < streak + 1) streak++;
     else break;
   }
   document.getElementById("streak").innerText = `🔥 連続：${streak} 日`;
 
   // history
+  const historyList = document.getElementById("historyList");
   historyList.innerHTML="";
   data.slice().reverse().forEach(d=>{
-    const li=document.createElement("li");
-    li.textContent=`${d.date}：${d.min} 分`;
+    const li = document.createElement("li");
+    li.textContent = `${d.date}：${d.min} 分`;
     historyList.appendChild(li);
   });
 
@@ -174,11 +175,11 @@ function drawChart(data){
     daily[d.date]=(daily[d.date]||0)+d.min;
   });
 
-  const labels=Object.keys(daily);
-  const values=Object.values(daily);
+  const labels = Object.keys(daily).sort();
+  const values = labels.map(label => daily[label]);
 
   if(chart) chart.destroy();
-  chart=new Chart(document.getElementById("chart"),{
+  chart = new Chart(document.getElementById("chart"), {
     type:"bar",
     data:{
       labels,
@@ -187,13 +188,22 @@ function drawChart(data){
         data:values,
         backgroundColor:"#ff8fab"
       }]
+    },
+    options:{
+      responsive:true,
+      plugins:{
+        legend:{ display:true },
+      },
+      scales:{
+        y:{ beginAtZero:true }
+      }
     }
   });
 }
 
 function show(id){
-  history.classList.add("hidden");
-  graph.classList.add("hidden");
+  document.getElementById("history").classList.add("hidden");
+  document.getElementById("graph").classList.add("hidden");
   document.getElementById(id).classList.remove("hidden");
 }
 
