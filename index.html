@@ -106,7 +106,7 @@ li {
   </div>
 
   <div id="graph" class="hidden">
-    <canvas id="chart"></canvas>
+    <canvas id="chart" width="700" height="400"></canvas> <!-- 幅を固定 -->
   </div>
 </div>
 
@@ -175,8 +175,17 @@ function drawChart(data){
     daily[d.date]=(daily[d.date]||0)+d.min;
   });
 
-  const labels = Object.keys(daily).sort();
-  const values = labels.map(label => daily[label]);
+  const dates = Object.keys(daily).sort();
+  const values = dates.map(date => daily[date]);
+
+  // X軸ラベルに「曜日\n月/日」を追加
+  const labels = dates.map(date=>{
+    const dt = new Date(date);
+    const week = ["日","月","火","水","木","金","土"];
+    const dayOfWeek = week[dt.getDay()];
+    const monthDay = `${dt.getMonth()+1}/${dt.getDate()}`;
+    return `${dayOfWeek}\n${monthDay}`;
+  });
 
   if(chart) chart.destroy();
   chart = new Chart(document.getElementById("chart"), {
@@ -186,11 +195,13 @@ function drawChart(data){
       datasets:[{
         label:"勉強時間（分）",
         data:values,
-        backgroundColor:"#ff8fab"
+        backgroundColor:"#ff8fab",
+        barPercentage: 0.6,    // 棒幅調整
+        categoryPercentage: 0.7
       }]
     },
     options:{
-      responsive:true,
+      responsive:false,        // 幅を固定
       plugins:{
         legend:{ display:true },
       },
@@ -198,7 +209,7 @@ function drawChart(data){
         y:{
           beginAtZero:true,
           ticks:{
-            stepSize:5  // ここで5分ごとの目盛りに設定
+            stepSize:5          // 5分ごとの目盛り
           }
         }
       }
