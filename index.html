@@ -195,7 +195,12 @@ function drawChart(data){
         legend:{ display:true },
       },
       scales:{
-        y:{ beginAtZero:true }
+        y:{
+          beginAtZero:true,
+          ticks:{
+            stepSize:5  // ここで5分ごとの目盛りに設定
+          }
+        }
       }
     }
   });
@@ -207,6 +212,7 @@ function show(id){
   document.getElementById(id).classList.remove("hidden");
 }
 
+// 初回描画
 render();
 </script>
 
