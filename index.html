@@ -8,14 +8,23 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <style>
-html, body { margin:0; padding:0; height:100%; font-family:system-ui; background:linear-gradient(135deg,#ffdde1,#ffb6c1); }
-body { display:flex; flex-direction:column; align-items:center; justify-content:flex-start; overflow-y:auto; text-align:center; position:relative; }
+html, body {
+  margin:0; padding:0; height:100%;
+  font-family:system-ui;
+  min-width:100vw; overflow-x:hidden;
+  background:linear-gradient(135deg,#ffdde1,#ffb6c1);
+}
+body {
+  display:flex; flex-direction:column; align-items:center;
+  justify-content:flex-start; overflow-y:auto; text-align:center; position:relative;
+}
 
 h1 { color:#fff; margin:10px 0; }
 
 .card {
   background:#fff; border-radius:30px; padding:20px; margin:8px 0;
-  box-shadow:0 10px 25px rgba(0,0,0,.15); width:95%; max-width:500px; flex-shrink:0;
+  box-shadow:0 10px 25px rgba(0,0,0,.15);
+  width:90%; max-width:500px; flex-shrink:0;
 }
 
 input { width:65%; padding:12px; font-size:16px; border-radius:15px; border:1px solid #ccc; }
@@ -32,23 +41,16 @@ li { font-size:14px; padding:3px 0; }
 
 .hidden { display:none; }
 
-/* グラフコンテナを画面比率に */
-#chartContainer { width:100%; height:40vh; position:relative; overflow:hidden; }
+#chartContainer { width:95%; max-width:500px; height:45vh; position:relative; overflow:hidden; margin:auto; }
 #weekNav { margin:5px 0; }
 
-/* 画面全体に演出表示 */
 #effectContainer {
-  position: fixed;
-  top:0; left:0;
-  width:100vw; height:100vh;
-  pointer-events:none;
-  overflow: visible;
-  z-index: 9999;
+  position: fixed; top:0; left:0; width:100vw; height:100vh;
+  pointer-events:none; overflow:visible; z-index:9999;
 }
 
 .star { position:absolute; animation:fly 1s linear forwards; }
 @keyframes fly { 0%{opacity:1; transform:translateY(0) rotate(0deg);} 100%{opacity:0; transform:translateY(-150px) rotate(360deg);} }
-
 </style>
 </head>
 <body>
@@ -192,6 +194,11 @@ function render(){
 
 let chart;
 function drawChart(data,weekOffset){
+  const canvas = document.getElementById("chart");
+  const container = document.getElementById("chartContainer");
+  canvas.width = container.clientWidth;
+  canvas.height = container.clientHeight;
+
   const weekNames=["日","月","火","水","木","金","土"];
   const labels=[];
   const values=[];
@@ -210,7 +217,7 @@ function drawChart(data,weekOffset){
     values.push(dayData);
   }
   if(chart) chart.destroy();
-  chart=new Chart(document.getElementById("chart"),{
+  chart=new Chart(canvas,{
     type:"bar",
     data:{ labels,datasets:[{label:"勉強時間（分）",data:values,backgroundColor:"#ff8fab",barPercentage:0.6,categoryPercentage:0.7}] },
     options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:true } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:5 } } } }
